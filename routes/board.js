@@ -408,6 +408,7 @@ Router.route('/boards/:board_id/tickets')
 					'data': {
 						'id':           ticket._id,
 						'color':        ticket.color,
+						'heading':      ticket.heading,
 						'content':      ticket.content,
 						'position':     ticket.position,
 						'createdBy':    ticket.createdBy,
