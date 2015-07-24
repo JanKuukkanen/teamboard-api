@@ -98,7 +98,7 @@ Router.route('/boards')
 		}
 
 		if(payload.size)
-			payload.members.push({user: req.user.id, role: 'admin', isActive: true, lastSeen: Date.now()});
+			payload.members.push({user: req.user.id, role: 'admin'});
 
 		new Board(payload).save(function(err, board) {
 			if(err) {
@@ -669,7 +669,7 @@ Router.route('/boards/:board_id/access')
 		req.resolved.board.accessCode = null
 
 		req.resolved.board.members = [];
-		req.resolved.board.members.push({user: req.user.id, role: 'admin', isActive: true, lastSeen: Date.now()});
+		req.resolved.board.members.push({user: req.user.id, role: 'admin'});
 
 		req.resolved.board.save(function(err) {
 			if(err) {
@@ -718,7 +718,7 @@ Router.route('/boards/:board_id/access/:code/grantaccess')
 		});
 
 		if(!isMember) {
-			board.members.push({user: user.id, role: 'member', isActive: true, lastSeen: Date.now()});
+			board.members.push({user: user.id, role: 'member'});
 			board.save(function (err, board) {
 				if (err) {
 					return next(utils.error(500, err));
@@ -783,7 +783,7 @@ Router.route('/boards/:board_id/access/:code')
 
 				var guestToken = jwt.sign(payload, secret);
 
-				board.members.push({user: user.id, role: 'guest', isActive: true, lastSeen: Date.now()});
+				board.members.push({user: user.id, role: 'guest'});
 				board.save(function (err, board) {
 					if (err) {
 						return next(utils.error(500, err));

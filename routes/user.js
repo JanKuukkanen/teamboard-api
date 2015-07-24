@@ -25,7 +25,7 @@ Router.route('/user/edit')
     .put(middleware.authenticate('user'))
     .put(function(req, res, next) {
         var payload = req.body;
-        
+
         User.findOne({ '_id': req.user.id }, function(err, user) {
             if(err) {
                 return next(utils.error(500, err));
@@ -48,7 +48,7 @@ Router.route('/user/edit')
                 }
                 return res.json(200, user);
             });
-        });     
+        });
     });
 
 Router.route('/user/changepw')

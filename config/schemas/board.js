@@ -74,17 +74,8 @@ var BoardSchema = module.exports = new mongoose.Schema({
             ref: 'user',
             type: mongoose.Schema.Types.ObjectId
         },
-        role: {
-            type: String
-        },
-
-        isActive: {
-            type:    Boolean,
-            default: false
-        },
-        lastSeen: {
-            type: Date
-        }
+        // This should be enumerated
+        role: { type: String }
     }]
 
 });
