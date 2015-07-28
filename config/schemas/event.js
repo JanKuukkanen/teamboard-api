@@ -85,5 +85,3 @@ EventSchema.options.toObject.transform = EventSchema.options.toJSON.transform;
 
 EventSchema.set('autoIndex', process.env.NODE_ENV !== 'production');
 EventSchema.index({board: 1, type: 1});
-
-
