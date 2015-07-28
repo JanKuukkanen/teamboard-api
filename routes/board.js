@@ -262,6 +262,7 @@ Router.route('/boards/:board_id/export')
 	.get(middleware.authenticate('user', 'guest'))
 	.get(middleware.relation('admin', 'user', 'guest'))
 	.get(function(req, res, next) {
+
 		var format = req.query.format ? req.query.format : 'json';
 
 		var boardQuery = Board.findById(req.resolved.board.id)
@@ -278,7 +279,7 @@ Router.route('/boards/:board_id/export')
 			}
 
 			var ticketQuery = Ticket.find({ 'board': req.resolved.board.id })
-				.select('-__v -board').populate('comments.user').lean();
+				.select('-__v -board').lean();
 
 			ticketQuery.exec(function(err, tickets) {
 
@@ -296,11 +297,13 @@ Router.route('/boards/:board_id/export')
 					'type': 'TICKET_COMMENT',
 					'board': req.resolved.board.id,
 				})
+
 				query.select('-_id -type -board -createdAt');
 				query.populate({
 						'path': 'user',
 						'select': '-avatar -account_type -providers -_id'
 				});
+
 				return query.exec(function(err, comments) {
 					if(err) {
 						return next(utils.error(500, err));
