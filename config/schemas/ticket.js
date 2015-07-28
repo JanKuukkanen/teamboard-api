@@ -105,3 +105,6 @@ TicketSchema.options.toJSON.transform = function(doc, ret) {
  * BUG See 'config/schemas/board.js' for details.
  */
 TicketSchema.options.toObject.transform = TicketSchema.options.toJSON.transform;
+
+TicketSchema.set('autoIndex', process.env.NODE_ENV !== 'production');
+TicketSchema.index({board: 1});
