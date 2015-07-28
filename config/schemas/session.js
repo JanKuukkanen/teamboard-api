@@ -53,3 +53,7 @@ SessionSchema.options.toJSON.transform = function(doc, ret) {
  * BUG See 'config/schemas/board.js' for details.
  */
 SessionSchema.options.toObject.transform = SessionSchema.options.toJSON.transform;
+
+//SessionSchema.set('autoIndex', process.env.NODE_ENV !== 'production');
+SessionSchema.index({token: 1});
+SessionSchema.index({user: 1});

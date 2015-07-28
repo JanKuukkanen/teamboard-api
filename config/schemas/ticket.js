@@ -106,5 +106,7 @@ TicketSchema.options.toJSON.transform = function(doc, ret) {
  */
 TicketSchema.options.toObject.transform = TicketSchema.options.toJSON.transform;
 
-TicketSchema.set('autoIndex', process.env.NODE_ENV !== 'production');
+//TicketSchema.set('autoIndex', process.env.NODE_ENV !== 'production');
 TicketSchema.index({board: 1});
+TicketSchema.index({lastEditedBy: 1});
+TicketSchema.index({createdBy: 1});
