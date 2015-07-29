@@ -5,58 +5,77 @@ var emitter  = require('./emitter');
 var Promise  = require('promise');
 var Event    = mongoose.model('event', require('../config/schemas/event'));
 
-module.exports = function(board) {
 
-        return function(ticket) {
-            return new Promise(function(resolve, reject) {
+/**
+ * Fuck this existence
+ */
+function createEvent(data, callback) {
+	return new Event(data).save(function(err, event) {
+		if(err) {
+			return callback(err);
+		}
+		return event.populate('user', callback);
+	});
+}
 
-                var ticketWidth = 192;
-                var ticketHeight = 108;
 
-                var oldPosition = {x: ticket.position.x, y: ticket.position.y};
+module.exports = function(board, user) {
+	return function(ticket) {
+		return new Promise(function(resolve, reject) {
 
-                if(ticket.position.x > (board.size.width * ticketWidth) - ticketWidth / 2){
-                    ticket.position.x = (board.size.width * ticketWidth) - ticketWidth;
-                }
+			var ticketWidth = 192;
+			var ticketHeight = 108;
 
-                if(ticket.position.y > (board.size.height * ticketHeight) - ticketHeight / 2){
-                    ticket.position.y = (board.size.height * ticketHeight) - ticketHeight;
-                }
+			var old = ticket.toObject();
 
-                ticket.save(function(err) {
-                    // we've saved the dog into the db here
-                    if (err) return reject(err);
+			if(ticket.position.x > (board.size.width * ticketWidth) - ticketWidth / 2){
+				ticket.position.x = (board.size.width * ticketWidth) - ticketWidth;
+			}
 
-                    new Event({
-                        'type': 'TICKET_EDIT',
-                        'board': ticket.board,
-                        'data': {
-                            'id': ticket._id,
-                            'oldAttributes': {
-                                'color':    ticket.color,
-                                'heading':  ticket.heading,
-                                'content':  ticket.content,
-                                'position': oldPosition,
-                            },
+			if(ticket.position.y > (board.size.height * ticketHeight) - ticketHeight / 2){
+				ticket.position.y = (board.size.height * ticketHeight) - ticketHeight;
+			}
 
-                            'newAttributes': {
-                                'color':    ticket.color,
-                                'heading':  ticket.heading,
-                                'content':  ticket.content,
-                                'position': ticket.position,
-                            },
-                        }
-                    }).save(function(err, ev) {
-                            if(err) {
-                                return console.error(err);
-                            }
-                            emitter.to(ev.board)
-                                .emit('board:event', ev.toObject());
-                            return resolve();
-                        });
+			ticket.lastEditedBy = user.id
 
-                });
+			ticket.save(function(err, ticket) {
+				// we've saved the dog into the db here
+				if (err) return reject(err);
 
-            });
-        }
+				ticket.populate('createdBy lastEditedBy', function(err, ticket) {
+					createEvent({
+						'type': 'TICKET_EDIT',
+						'board': ticket.board,
+						'user': user.id,
+						'data': {
+							'id': ticket.id,
+							'oldAttributes': {
+								'color':        old.color,
+								'heading':      old.heading,
+								'content':      old.content,
+								'position':     old.position,
+								'createdBy':    old.createdBy,
+								'lastEditedBy': old.lastEditedBy
+							},
+							'newAttributes': {
+								'color':        ticket.color,
+								'heading':      ticket.heading,
+								'content':      ticket.content,
+								'position':     ticket.position,
+								'createdBy':    ticket.createdBy,
+								'lastEditedBy': ticket.lastEditedBy
+							},
+						}
+					}, function(err, ev) {
+						if(err) {
+							return console.error(err);
+						}
+						emitter.to(ev.board)
+							.emit('board:event', ev.toObject());
+						return resolve();
+					});
+				});
+			});
+		});
+	}
 }
