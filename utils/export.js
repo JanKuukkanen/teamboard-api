@@ -39,6 +39,18 @@ function contentEdit(content) {
 	return content;
 }
 
+function addCommentsToTicket(tickets, comments) {
+	return tickets.map(function(ticket) {
+		ticket.comments = comments.filter(function(comment){
+			return ticket._id.equals(comment.data.ticket_id);
+		}).map(function(comment) {
+			return { user: comment.user.name, message: comment.data.message };
+		});
+		delete ticket._id;
+		return ticket;
+	});
+}
+
 /**
  * Generates plain text from board and tickets
  * @param {object} board - Board object to be generated.
@@ -46,26 +58,26 @@ function contentEdit(content) {
  * @returns {string} plain text
  */
 function generatePlainText(board, tickets) {
-	return 'Board information\n' +
-	'=========================================\n\n' +
-	'Board name: ' + undefCheck(board.name, '') + '\n\n' +
-	'Board members: \n' +
-	board.members.map(function(member){
-		return '    ' + member.user.name + ' - ' + member.role + '\n'
-	}).join('') + '\n' +
-	'=========================================\n\n\n\n' +
-	'Tickets information\n' +
-	'=========================================\n' +
-	tickets.map(function(t) {
-		return '\n' +
+		return 'Board information\n' +
+		'=========================================\n\n' +
+		'Board name: ' + undefCheck(board.name, '') + '\n\n' +
+		'Board members: \n' +
+		board.members.map(function(member){
+			return '    ' + member.user.name + ' - ' + member.role + '\n'
+		}).join('') + '\n' +
+		'=========================================\n\n\n\n' +
+		'Tickets information\n' +
+		'=========================================\n' +
+		tickets.map(function(t) {
+			return '\n' +
 				'------------------------------------------\n' +
-			    'Heading:  ' + contentEdit(undefCheck(t.heading, 'Empty')) + '\n\n' +
-			    'Content:  ' + contentEdit(undefCheck(t.content, 'Empty')) + '\n\n' +
+				'Heading:  ' + contentEdit(undefCheck(t.heading, 'Empty')) + '\n\n' +
+				'Content:  ' + contentEdit(undefCheck(t.content, 'Empty')) + '\n\n' +
 				'Color:    ' + hexToColor(t.color) + '\n\n' +
-				'Comments: ' + undefCheck(t.comments.map(function(c) {return c.user.name + ': ' + c.content + ' '}), 'None') + '\n' +
+				'Comments: ' + undefCheck(t.comments.map(function(c) {return '\n      ' + c.user + ': ' + c.message}).join(''), 'None') + '\n' +
 				'------------------------------------------\n';
-	}).join('') + '\n' +
-	'=========================================';
+		}).join('') + '\n' +
+		'=========================================';
 }
 
 /**
@@ -95,7 +107,7 @@ function generateCSV(board, tickets) {
 			'CONTENT':    t.content,
 			'COLOR':      t.color,
 			'COMMENTS':   t.comments.map(function(c) {
-				return c.user.name + ': ' + c.content;
+				return c.user + ': ' + c.message;
 			}) + '',
 			'POSITION_X': '' + t.position.x + '',
 			'POSITION_Y': '' + t.position.y + '',
@@ -143,7 +155,8 @@ function postImage(req, board, tickets, callback) {
 };
 
 module.exports = {
-	generatePlainText: generatePlainText,
-	generateCSV: generateCSV,
-	postImage: postImage
+	generatePlainText: 	 generatePlainText,
+	generateCSV: 		 generateCSV,
+	postImage: 			 postImage,
+	addCommentsToTicket: addCommentsToTicket
 }

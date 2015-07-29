@@ -262,6 +262,7 @@ Router.route('/boards/:board_id/export')
 	.get(middleware.authenticate('user', 'guest'))
 	.get(middleware.relation('admin', 'user', 'guest'))
 	.get(function(req, res, next) {
+
 		var format = req.query.format ? req.query.format : 'json';
 
 		var boardQuery = Board.findById(req.resolved.board.id)
@@ -278,7 +279,7 @@ Router.route('/boards/:board_id/export')
 			}
 
 			var ticketQuery = Ticket.find({ 'board': req.resolved.board.id })
-				.select('-_id -__v -board').populate('comments.user').lean();
+				.select('-__v -board').lean();
 
 			ticketQuery.exec(function(err, tickets) {
 
@@ -292,24 +293,47 @@ Router.route('/boards/:board_id/export')
 					// Edit board name incase name is not valid filename
 					board.name = utils.sanitize(board.name,'');
 
-				if(format == 'csv') {
-					return res.attachment(board.name + '.csv').send(200, exportAs.generateCSV(board, tickets));
-				}
+				var query = Event.find({
+					'type': 'TICKET_COMMENT',
+					'board': req.resolved.board.id,
+				})
 
-				if(format == 'plaintext') {
-					return res.attachment(board.name + '.txt').send(200, exportAs.generatePlainText(board, tickets));
-				}
+				query.select('-_id -type -board -createdAt');
+				query.populate({
+						'path': 'user',
+						'select': '-avatar -account_type -providers -_id'
+				});
 
-				if(format == 'image') {
-					return exportAs.postImage(req, board, tickets, function(options) {
-						request.post(options).pipe(res);
-					});
-				}
+				return query.exec(function(err, comments) {
+					if(err) {
+						return next(utils.error(500, err));
+					}
 
-				var boardObject     	= board;
-				    boardObject.tickets = tickets;
+					// Adds comments to ticket object for easier export info generating
+					tickets = exportAs.addCommentsToTicket(tickets, comments);
 
-				return res.attachment(board.name + '.json').json(200, boardObject);
+					if(format == 'csv') {
+						return res.attachment(board.name + '.csv').send(200, exportAs.generateCSV(board, tickets));
+					}
+
+					if(format == 'plaintext') {
+						return res.attachment(board.name + '.txt').send(200, exportAs.generatePlainText(board, tickets));
+					}
+
+					if(format == 'image') {
+						return exportAs.postImage(req, board, tickets, function(options) {
+							request.post(options).pipe(res);
+						});
+					}
+
+					var boardObject     	= board;
+						boardObject.tickets = tickets;
+
+
+					return res.attachment(board.name + '.json').json(200, boardObject);
+				});
+
+
 			});
 		});
 	});
@@ -329,25 +353,25 @@ Router.route('/boards/:board_id/tickets')
 
 		var comments = Event.aggregate([
 		{
-        	$match : {
-        		board : new ObjectId(req.resolved.board.id),
-        		type : 'TICKET_COMMENT'
-        	}
-        },
-        { $group: {
-            _id: "$data.ticket_id",
-            sum: { $sum: 1 }
-        }}
-    	], function (err, comments) {
-        	if (err) {
-         	  return next(utils.error(500, err));
-       		}
-        	return comments;
-    	});
+			$match : {
+				board : new ObjectId(req.resolved.board.id),
+				type : 'TICKET_COMMENT'
+			}
+		},
+		{ $group: {
+			_id: "$data.ticket_id",
+			sum: { $sum: 1 }
+		}}
+		], function (err, comments) {
+			if (err) {
+			   return next(utils.error(500, err));
+			   }
+			return comments;
+		});
 
-    	comments.then(function(comment){
+		comments.then(function(comment){
 
-    		var ticketQuery = Ticket.find({'board': board.id})
+			var ticketQuery = Ticket.find({'board': board.id})
 			.populate('createdBy').populate('lastEditedBy');
 			ticketQuery.exec(function(err, tickets) {
 				if(err) {
@@ -392,8 +416,8 @@ Router.route('/boards/:board_id/tickets')
 	.post(middleware.relation('admin', 'user', 'guest'))
 	.post(function(req, res, next) {
 		var payload              = req.body;
-		    payload.board        = req.resolved.board.id;
-		    payload.createdBy    = req.user.id;
+			payload.board        = req.resolved.board.id;
+			payload.createdBy    = req.user.id;
 
 		new Ticket(payload).save(function(err, ticket) {
 			if(err) {
