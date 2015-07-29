@@ -208,8 +208,7 @@ Router.route('/boards/:board_id')
 							function (err, tickets) {
 
 							if(tickets.length > 0) {
-								Promise.all(tickets.map(utils.ticketClamper(req.resolved.board))).then(function(){
-
+								Promise.all(tickets.map(utils.ticketClamper(req.resolved.board, req.user))).then(function(){
 									utils.createEditBoardEvent(req, board, old);
 								})
 							}
