@@ -475,50 +475,60 @@ Router.route('/boards/:board_id/tickets/:ticket_id')
 	.put(function(req, res, next) {
 		var old               = req.resolved.ticket.toObject();
 		req.body.lastEditedBy = req.user.id;
-		req.body.comments     = null;
 		req.resolved.ticket   = _.merge(req.resolved.ticket, req.body);
+		
+		Event.find({type: 'TICKET_COMMENT', "data.ticket_id": req.resolved.ticket.id})
+			.count(function(err, comments) {
+				if (err) {
+				   return next(utils.error(500, err));
+				}
 
-		return req.resolved.ticket.save(function(err, ticket) {
-			if(err) {
-				return next(utils.error(500, err));
-			}
-
-			if(!ticket) return next(utils.error(404, 'Ticket not found'));
-
-			ticket.populate('createdBy lastEditedBy', function(err, ticket) {
-				createEvent({
-					'type': 'TICKET_EDIT',
-					'board': ticket.board,
-					'user': req.user.id,
-					'data': {
-						'id': ticket._id,
-						'oldAttributes': {
-							'color':    old.color,
-							'heading':  old.heading,
-							'content':  old.content,
-							'position': old.position,
-							'lastEditedBy': old.lastEditedBy
-
-						},
-						'newAttributes': {
-							'color':    ticket.color,
-							'heading':  ticket.heading,
-							'content':  ticket.content,
-							'position': ticket.position,
-							'lastEditedBy': ticket.lastEditedBy
-						},
-					}
-				}, function(err, ev) {
+				return req.resolved.ticket.save(function(err, ticket) {
 					if(err) {
-						return console.error(err);
+						return next(utils.error(500, err));
 					}
-					utils.emitter.to(ev.board)
-						.emit('board:event', ev.toObject());
-				});
 
-				return res.json(200, ticket);
-			});
-		});
+					if(!ticket) return next(utils.error(404, 'Ticket not found'));
+
+					ticket.populate('createdBy lastEditedBy', function(err, ticket) {
+						createEvent({
+							'type': 'TICKET_EDIT',
+							'board': ticket.board,
+							'user': req.user.id,
+							'data': {
+								'id': ticket._id,
+								'oldAttributes': {
+									'color':    old.color,
+									'heading':  old.heading,
+									'content':  old.content,
+									'position': old.position,
+									'comments': comments,
+									'lastEditedBy': old.lastEditedBy
+
+								},
+								'newAttributes': {
+									'color':    ticket.color,
+									'heading':  ticket.heading,
+									'content':  ticket.content,
+									'position': ticket.position,
+									'comments': comments,
+									'lastEditedBy': ticket.lastEditedBy
+								},
+							}
+						}, function(err, ev) {
+							if(err) {
+								return console.error(err);
+							}
+							utils.emitter.to(ev.board)
+								.emit('board:event', ev.toObject());
+						});
+
+						ticket.comments = comments;
+
+						return res.json(200, ticket);
+					});
+				});
+			});	
 	})
 
 	/**
